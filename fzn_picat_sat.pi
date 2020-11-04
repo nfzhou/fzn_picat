@@ -447,7 +447,7 @@ post(array_var_bool_element(I,Array,E)) =>
 post(array_var_int_element(I,Array,E)) =>
     to_list(Array) = List,
     element(I,List,E).
-post(member_bool(Array,E)) =>
+post(picat_member_bool(Array,E)) =>
     to_list(Array) = List,
     (ground(Array) ->
         E :: List
@@ -459,7 +459,7 @@ post(member_bool(Array,E)) =>
         Min #=< E,
         E #=< Max
     ).
-post(member_int(Array,E)) =>
+post(picat_member_int(Array,E)) =>
     to_list(Array) = List,
     (ground(Array) ->
         E :: List
@@ -604,94 +604,67 @@ post(int_lin_gt_reif(Cs,Xs,Rhs,B)) =>
     B #<=> (CXs #> Rhs).
 
 % global constraints
-post(all_different(Vec)) =>
+post(picat_all_different_int(Vec)) =>
     List = to_list(Vec),
     all_different(List).
-post(alldifferent(Vec)) =>
-    List = to_list(Vec),
-    all_different(List).
-post(all_different_int(Vec)) =>
-    List = to_list(Vec),
-    all_different(List).
-post(alldifferent_except_0(Vec)) =>
+post(picat_alldifferent_except_0(Vec)) =>
     List = to_list(Vec),
     all_different_except_0(List).
-post(inverse(Vec1,Vec2)) =>
+post(picat_inverse(Vec1,Vec2)) =>
     assignment(Vec1,Vec2).
-post(global_cardinality(Vec,KeyVec,CardVec)) =>
+post(picat_global_cardinality(Vec,KeyVec,CardVec)) =>
     List = to_list(Vec),
     KeyL = to_list(KeyVec),
     CardL = to_list(CardVec),
     Pairs = [$(Key-Card) : {Key,Card} in zip(KeyL,CardL)],
     global_cardinality(List,Pairs).
-post(count_reif(Vec,V,N,B)) =>
+post(picat_count_eq_reif(Vec,V,N,B)) =>
     List = to_list(Vec),
     Ni :: 0..length(Vec),
     count(V,List,#=,Ni),
     B #<=> (N #= Ni).
 % FIXME: swapped <, =< with >, =< respectively. (Roberto Amadini)
-post(count(Vec,V,N)) =>
+post(picat_count(Vec,V,N)) =>
     List = to_list(Vec),
     count(V,List,#=,N).
-post(count_eq(Vec,V,N)) =>
+post(picat_count_eq(Vec,V,N)) =>
     List = to_list(Vec),
     count(V,List,#=,N).
-post(count_geq(Vec,V,N)) =>
+post(picat_count_geq(Vec,V,N)) =>
     List = to_list(Vec),
     count(V,List,#=<,N).
-post(count_gt(Vec,V,N)) =>
+post(picat_count_gt(Vec,V,N)) =>
     List = to_list(Vec),
     count(V,List,#<,N).
-post(count_leq(Vec,V,N)) =>
+post(picat_count_leq(Vec,V,N)) =>
     List = to_list(Vec),
     count(V,List,#>=,N).
-post(count_lt(Vec,V,N)) =>
+post(picat_count_lt(Vec,V,N)) =>
     List = to_list(Vec),
     count(V,List,#>,N).
-post(count_neq(Vec,V,N)) =>
+post(picat_count_neq(Vec,V,N)) =>
     List = to_list(Vec),
     count(V,List,'#!=',N).
 %
-post(cumulative(SVec,DVec,RVec,Cap)) =>
+post(picat_cumulative(SVec,DVec,RVec,Cap)) =>
     to_list(SVec) = SList,
     to_list(DVec) = DList,
     to_list(RVec) = RList,
     cumulative(SList,DList,RList,Cap).
-post(circuit(Vec)) =>
+post(picat_circuit(Vec)) =>
     List = to_list(Vec),
     transform_circuit(List,List1),
     circuit(List1).
-post(subcircuit(Vec)) =>
+post(picat_subcircuit(Vec)) =>
     List = to_list(Vec),
     transform_circuit(List,List1),    
     subcircuit(List1).
-post(element(I,Vec,Y)) =>
-    List = to_list(Vec),
-    element(I,List,Y).
-post(element_int(I,Vec,Y)) =>
-    List = to_list(Vec),
-    element(I,List,Y).
-post(element_bool(I,Vec,Y)) =>
-    List = to_list(Vec),
-    element(I,List,Y).
-post(diffn(VecX,VecY,VecDX,VecDY)) =>
+post(picat_diffn(VecX,VecY,VecDX,VecDY)) =>
     Rects = [[VecX[I],VecY[I],VecDX[I],VecDY[I]] : I in 1 .. length(VecX)],
     diffn(Rects).
-post(maximum(X,Vec)) =>
-    List = to_list(Vec),
-    X #= max(List).
-post(maximum_int(X,Vec)) =>
-    List = to_list(Vec),
-    X #= max(List).
-post(minimum(X,Vec)) =>
-    List = to_list(Vec),
-    X #= min(List).
-post(minimum_int(X,Vec)) =>
-    List = to_list(Vec),
-    X #= min(List).
-post(regular_nfa(X, Q, S, D, Q0, F)) =>
+post(picat_regular_nfa(X, Q, S, D, Q0, F)) =>
     post($regular(X, Q, S, D, Q0, F)).
-post(regular(X, Q, S, D, Q0, F)) =>
+post(picat_regular(X, Q, S, D, Q0, F)) =>
     M = new_array(Q,S),   % D:(1..Q)*(1..S) -> 0..Q
     SizeD = length(D),
     fzn_1d_to_2d(1,1,S,D,1,SizeD,M),
@@ -703,25 +676,19 @@ post(regular(X, Q, S, D, Q0, F)) =>
         NF=F
     ),
     regular(X,Q,S,M,Q0,NF).
-post(table(VecV,VecT)) =>
-    post($table_int(VecV,VecT)).
-post(table_int(VecV,VecT)) =>
+post(picat_table_int(VecV,VecT)) =>
     N = length(VecV),
     transform_table(VecT,N,1,length(VecT),TupleT),
     table_in(VecV,TupleT).
-post(table_bool(VecV,VecT)) =>
-    post($table_int(VecV,VecT)).
-post(lex_less(Vec1,Vec2)) =>
+post(picat_table_bool(VecV,VecT)) =>
+    post($picat_table_int(VecV,VecT)).
+post(picat_lex_lesseq_int(Vec1,Vec2)) =>
+    lex_le(Vec1.to_list(),Vec2.to_list()).
+post(picat_lex_lesseq_bool(Vec1,Vec2)) =>
+    lex_le(Vec1.to_list(),Vec2.to_list()).
+post(picat_lex_less_int(Vec1,Vec2)) =>
     lex_lt(Vec1.to_list(),Vec2.to_list()).
-post(lex_lesseq(Vec1,Vec2)) =>
-    lex_le(Vec1.to_list(),Vec2.to_list()).
-post(lex_lesseq_int(Vec1,Vec2)) =>
-    lex_le(Vec1.to_list(),Vec2.to_list()).
-post(lex_lesseq_bool(Vec1,Vec2)) =>
-    lex_le(Vec1.to_list(),Vec2.to_list()).
-post(lex_less_int(Vec1,Vec2)) =>
-    lex_lt(Vec1.to_list(),Vec2.to_list()).
-post(lex_less_bool(Vec1,Vec2)) =>
+post(picat_lex_less_bool(Vec1,Vec2)) =>
     lex_lt(Vec1.to_list(),Vec2.to_list()).
 post(int_eq_imp(V1,V2,B)) =>
     B #<=> (V1#=V2).
@@ -729,14 +696,14 @@ post(int_le_imp(V1,V2,B)) =>
     B #<=> (V1#=<V2).
 
 % new, June 2020,
-post(bin_packing(C,Bin,W)) =>
+post(picat_bin_packing(C,Bin,W)) =>
     BinMin = fd_min_array(Bin),
     BinMax = fd_max_array(Bin),
     N = Bin.len,
     foreach(B in BinMin..BinMax) 
         sum([W[I] * (Bin[I] #= B) : I in 1..N]) #=< C
     end.
-post(bin_packing_load(Load, Bin, W)) =>
+post(picat_bin_packing_load(Load, Bin, W)) =>
     sum(Load) #= sum(W),
     LoadLen = Load.len,
     BinLen = Bin.len,
@@ -748,9 +715,11 @@ post(bin_packing_load(Load, Bin, W)) =>
     foreach(B in 1..LoadLen) 
         Load[B] #= sum([W[I] * (Bin[I] #= B) : I in 1..BinLen])
     end.
-post(decreasing(X)) =>
+post(picat_decreasing_bool(X)) =>
     decreasing(X).
-post(diffn_nonstrict(X,Y,DX,DY)) =>
+post(picat_decreasing_int(X)) =>
+    decreasing(X).
+post(picat_diffn_nonstrict(X,Y,DX,DY)) =>
     N = X.len,
     foreach(I in 1..N, J in I+1..N, DX[I] !== 0, DX[J] !== 0, DY[I] !== 0, DY[J] !== 0)
         X[I] + DX[I] #=< X[J] #\/
@@ -762,13 +731,13 @@ post(diffn_nonstrict(X,Y,DX,DY)) =>
         DY[I] #= 0 #\/
         DY[J] #= 0
     end.
-post(global_cardinality_closed(X,Cover,Counts)) =>
+post(picat_global_cardinality_closed(X,Cover,Counts)) =>
     CoverList = to_list(Cover),
     foreach(I in 1..X.len)
         X[I] :: CoverList
     end,
-    post($global_cardinality(X, Cover, Counts)). 
-post(global_cardinality_low_up(X,Cover,LBound,UBound)) =>
+    post($picat_global_cardinality(X, Cover, Counts)). 
+post(picat_global_cardinality_low_up(X,Cover,LBound,UBound)) =>
 %    writeln($global_cardinality_low_up(X,Cover,LBound,UBound)),
     N = len(Cover),
     T = new_array(N),
@@ -776,17 +745,19 @@ post(global_cardinality_low_up(X,Cover,LBound,UBound)) =>
         T[I] :: LBound[I]..UBound[I],
         count(Cover[I], X, #=, T[I])
     end.
-post(global_cardinality_low_up_closed(X,Cover,LBound,UBound)) =>
+post(picat_global_cardinality_low_up_closed(X,Cover,LBound,UBound)) =>
     N = len(X),
     CoverList = to_list(Cover),
     X :: CoverList,
-    post($global_cardinality_low_up(X, Cover, LBound, UBound)),
+    post($picat_global_cardinality_low_up(X, Cover, LBound, UBound)),
     % Implied condition
     N #>= sum(LBound),
     N #=< sum(UBound).
-post(increasing(X)) =>
+post(picat_increasing_bool(X)) =>
     increasing(X).
-post(knapsack(WVec, PVec, XVec, W, P)) =>
+post(picat_increasing_int(X)) =>
+    increasing(X).
+post(picat_knapsack(WVec, PVec, XVec, W, P)) =>
     N = XVec.len,
     foreach(I in 1..N)
       XVec[I] #>= 0
@@ -795,7 +766,7 @@ post(knapsack(WVec, PVec, XVec, W, P)) =>
     P #>= 0,
     P #= sum([XVec[I]*PVec[I] : I in 1..N]),
     W #= sum([XVec[I]*WVec[I] : I in 1..N]).
-post(network_flow_cost(Arc1D, Balance,Weight,Flow, Cost)) =>
+post(picat_network_flow_cost(Arc1D, Balance,Weight,Flow, Cost)) =>
     ArcLen = len(Arc1D) div 2,
     SourceNode = 1,
     SinkNode = 2,
@@ -807,7 +778,7 @@ post(network_flow_cost(Arc1D, Balance,Weight,Flow, Cost)) =>
         sum ([Flow[J] : J in 1..ArcLen, I == Arc1D[(J-1)*2+SourceNode]])  - 
         sum ([Flow[J] : J in 1..ArcLen, I == Arc1D[(J-1)*2+SinkNode]]) #= Balance[I] 
     end.
-post(seq_precede_chain(X)) =>
+post(picat_seq_precede_chain_int(X)) =>
     N = len(X),
     Low = fd_min_array(X), % least possible value
     Up = fd_max_array(X),  % greatest possible value
@@ -820,11 +791,11 @@ post(seq_precede_chain(X)) =>
        H[I] #<= H[I-1] + 1,
        H[I] #= max(X[I], H[I-1])
     end.
-post(value_precede_chain(C, X)) =>
+post(picat_value_precede_chain_int(C, X)) =>
     foreach(I in 2..C.length)
-        post($value_precede(C[I-1], C[I], X))
+        post($picat_value_precede_int(C[I-1], C[I], X))
     end.
-post(value_precede(S,T,X)) =>
+post(picat_value_precede_int(S,T,X)) =>
    XLen = X.length,
    B = new_array(XLen+1),
    B :: 0..1,

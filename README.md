@@ -3,9 +3,24 @@ requirements for MiniZinc Challenge.
 
     by Neng-Fa Zhou and Hakan Kjellerstrand, June 2020.
 
-The globals supported by the interpreter are available here:
+The MiniZinc library located in `mznlib/` can be used to compile FlatZinc
+models compatible with this interpreter. You can compile these models directly
+by including the `mznlib/` folder in your compilation command:
+```
+minizinc --solver mzn-fzn -I $PWD/mznlib zebra.mzn
+```
 
-    http://picat-lang.org/flatzinc/picat_globals.tar.gz
+Another option is to instantiate the `picat.msc.in` file (as `picat.msc`) by
+replacing the correct locations for the executable and the MiniZinc library.
+You can then use the `picat.msc` file as your solver:
+```
+minizinc --solver picat.msc zebra.mzn
+```
+Or include the folder that contains `picat.msc` on your `MZN_SOLVER_PATH` and
+use the identifier:
+```
+minizinc --solver picat zebra.mzn
+```
 	
 The following examples illustrate the two different ways to use
 the interpreter to solve "zebra.fzn":

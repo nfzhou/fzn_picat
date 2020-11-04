@@ -1,0 +1,7 @@
+### Picat files
+*.qi
+
+### MiniZinc files
+*.fzn
+*.ozn
+*.msc
