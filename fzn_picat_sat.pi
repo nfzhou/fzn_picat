@@ -142,7 +142,7 @@ fzn_interpret(FD,predicate(_Elms),SymTable,PVars,SVars,OutAnns) =>  % predicate 
     fzn_interpret(FD,NItem,SymTable,PVars,SVars,OutAnns).
 
 fzn_declare_array(Max,ElmInstType,Ident,Anns,Init,SymTable,PVars0,PVars,OutAnns0,OutAnns) =>
-    (Max==0 -> BPArr=v; BPArr = new_array(Max)),
+    (Max==0 -> BPArr = {}; BPArr = new_array(Max)),
     (ElmInstType = $var(ElmType) ->true; ElmType = ElmInstType),
     SymTable.put(Ident,BPArr),
     (member($output_array(Ranges),Anns)->
@@ -189,7 +189,7 @@ fzn_register_var(Type,Ident,Anns,SymTable,PVars0,PVars,SVars0,SVars,OutAnns0,Out
         OutAnns=OutAnns0
     ).
 
-fzn_declare_array_vars(_Type,_BPArr,I,N,PVars0,PVars),I>N => PVars=PVars0.
+fzn_declare_array_vars(_Type,_BPArr,I,N,PVars0,PVars), I>N => PVars=PVars0.
 fzn_declare_array_vars(Type,BPArr,I,N,PVars0,PVars) =>
     Var = BPArr[I],
     fzn_declare_array_var(Var,Type),
