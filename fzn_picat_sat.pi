@@ -357,7 +357,7 @@ fzn_output([]) => println('----------').
 fzn_output([output_var(Ident,Type,Var)|L]) =>
     printf("%w = ",Ident),
     fzn_write(Type,Var),
-    writeln(';'),
+    println(';'),
     fzn_output(L).
 fzn_output([output_array(Ident,Ranges,ElmType,BPArr)|L]) =>
     length(Ranges) = Dim,
