@@ -178,15 +178,16 @@ fzn_declare_var('{}'(Dom),Ident,Anns,SymTable,PVars0,PVars,SVars0,SVars,OutAnns0
 
 fzn_register_var(Type,Ident,Anns,SymTable,PVars0,PVars,SVars0,SVars,OutAnns0,OutAnns,Var) =>
     SymTable.put(Ident,Var),
-    (membchk(var_is_introduced,Anns)->
-        PVars=PVars0,SVars=[Var|SVars0]
-    ;
-        PVars=[Var|PVars0],SVars=SVars0
-    ),
-    (membchk(output_var,Anns)->
+    (membchk(output_var,Anns) ->
+        PVars = [Var|PVars0], SVars = SVars0,
         OutAnns=[$output_var(Ident,Type,Var)|OutAnns0]
     ;
-        OutAnns=OutAnns0
+        OutAnns = OutAnns0,
+        (membchk(var_is_introduced,Anns) ->
+            PVars=PVars0, SVars=[Var|SVars0]
+        ;
+            PVars=[Var|PVars0], SVars=SVars0
+        )
     ).
 
 fzn_declare_array_vars(_Type,_BPArr,I,N,PVars0,PVars), I>N => PVars=PVars0.
@@ -357,7 +358,7 @@ fzn_output([]) => println('----------').
 fzn_output([output_var(Ident,Type,Var)|L]) =>
     printf("%w = ",Ident),
     fzn_write(Type,Var),
-    writeln(';'),
+    println(';'),
     fzn_output(L).
 fzn_output([output_array(Ident,Ranges,ElmType,BPArr)|L]) =>
     length(Ranges) = Dim,
@@ -401,6 +402,14 @@ new_domain_var(X) =>
 %%%
 % post(Constr) ?=> writeln(Constr),fail.
 
+post(picat_connected(FromArr,ToArr,NsArr,EsArr)) =>
+    FromList = to_list(FromArr),
+    ToList = to_list(ToArr),
+    NsList = to_list(NsArr),
+    EsList = to_list(EsArr),
+    Vs = zip(1..len(NsArr), NsList),
+    Es = zip(FromList,ToList,EsList),
+    scc(Vs,Es).
 post(set_in(X,DomExp)) =>
     (DomExp='{}'(Dom)->
         NDom=Dom
@@ -653,12 +662,20 @@ post(picat_cumulative(SVec,DVec,RVec,Cap)) =>
     cumulative(SList,DList,RList,Cap).
 post(picat_circuit(Vec)) =>
     List = to_list(Vec),
+    circuit(List).
+post(picat_subcircuit(Vec)) =>
+    List = to_list(Vec),
+    subcircuit(List).
+/*
+post(picat_circuit(Vec)) =>
+    List = to_list(Vec),
     transform_circuit(List,List1),
     circuit(List1).
 post(picat_subcircuit(Vec)) =>
     List = to_list(Vec),
     transform_circuit(List,List1),    
     subcircuit(List1).
+*/
 post(picat_diffn(VecX,VecY,VecDX,VecDY)) =>
     Rects = [[VecX[I],VecY[I],VecDX[I],VecDY[I]] : I in 1 .. length(VecX)],
     diffn(Rects).
