@@ -400,7 +400,7 @@ new_domain_var(X) =>
     X = new_fd_var().
 
 %%%
-% post(Constr) ?=> writeln(Constr),fail.
+% post(Constr) ?=> writeln($posting(Constr)),fail.
 
 post(picat_connected(FromArr,ToArr,NsArr,EsArr)) =>
     FromList = to_list(FromArr),
@@ -446,7 +446,12 @@ post(array_bool_xor(Array)) =>
 %
 post(array_bool_element(I,Array,E)) =>
     to_list(Array) = List,
-    element(I,List,E).
+    LB = fd_min(I),
+    (LB == 0 ->
+        element0(I,List,E)
+    ;
+        element(I,List,E)
+    ).
 post(array_int_element(I,Array,E)) =>
     to_list(Array) = List,
     element(I,List,E).
@@ -585,13 +590,25 @@ post(int_lin_lt(Cs,Xs,Rhs)) =>
 post(int_lin_gt(Cs,Xs,Rhs)) =>
     vector_sum(Cs,Xs,CXs),
     CXs #> Rhs.
-
+%
 post(bool_lin_eq(Cs,Xs,Rhs)) =>
     vector_sum(Cs,Xs,CXs),
     CXs #= Rhs.
+post(bool_lin_ne(Cs,Xs,Rhs)) =>
+    vector_sum(Cs,Xs,CXs),
+    CXs #!= Rhs.
 post(bool_lin_le(Cs,Xs,Rhs)) =>
     vector_sum(Cs,Xs,CXs),
     CXs #=< Rhs.
+post(bool_lin_ge(Cs,Xs,Rhs)) =>
+    vector_sum(Cs,Xs,CXs),
+    CXs #>= Rhs.
+post(bool_lin_lt(Cs,Xs,Rhs)) =>
+    vector_sum(Cs,Xs,CXs),
+    CXs #< Rhs.
+post(bool_lin_gt(Cs,Xs,Rhs)) =>
+    vector_sum(Cs,Xs,CXs),
+    CXs #> Rhs.
 
 post(int_lin_eq_reif(Cs,Xs,Rhs,B)) =>
     vector_sum(Cs,Xs,CXs),
@@ -662,10 +679,40 @@ post(picat_cumulative(SVec,DVec,RVec,Cap)) =>
     cumulative(SList,DList,RList,Cap).
 post(picat_circuit(Vec)) =>
     List = to_list(Vec),
-    circuit(List).
+    LB = min([fd_min(V) : V in List]),
+    (LB == 1 ->
+        circuit(List)
+    ;
+        N = len(Vec),
+        UB = LB+N-1,
+        List :: LB..UB,  
+        Vs = [{I,1} : I in LB..UB],  
+        Es = [{I,J,B} : I in LB..UB,
+                        Index = I-LB+1,
+                        J in fd_dom(Vec[Index]),  
+                        J !== I,  
+                        B #<=> Vec[Index] #= J],  
+        hcp(Vs,Es)
+    ).
 post(picat_subcircuit(Vec)) =>
     List = to_list(Vec),
-    subcircuit(List).
+    LB = min([fd_min(V) : V in List]),
+    (LB == 1 ->
+        subcircuit(List)
+    ;
+        N = len(Vec),  
+        UB = LB+N-1,
+        List :: LB..UB,  
+        Vs = [{I,B} : I in LB..UB,  
+                      B #<=> Vec[I-LB+1] #!= I],  
+        Es = [{I,J,B} : I in LB..UB,
+                        Index = I-LB+1,
+                        J in fd_dom(Vec[Index]),  
+                        J !== I,  
+                        B #<=> Vec[Index] #= J],  
+        hcp(Vs,Es)
+    ).
+
 /*
 post(picat_circuit(Vec)) =>
     List = to_list(Vec),
@@ -707,10 +754,91 @@ post(picat_lex_less_int(Vec1,Vec2)) =>
     lex_lt(Vec1.to_list(),Vec2.to_list()).
 post(picat_lex_less_bool(Vec1,Vec2)) =>
     lex_lt(Vec1.to_list(),Vec2.to_list()).
+%
+post(array_bool_and_imp(A,R)) =>
+    L = to_list(A),
+    R #=> min(L) #= 1.        
+post(array_bool_or_imp(A,R)) =>
+    L = to_list(A),
+    R #=> max(L) #= 1.
+post(array_bool_xor_imp(A,R)) =>
+    L = to_list(A),
+    (L == []-> L1 = [0]; L1 = L),
+    R #=> sum(L1) mod 2 #= 1.
+post(bool_clause_imp(AP,AN,R)) =>
+    Ps = to_list(AP),
+    Ns = to_list(AN),
+    LenAN = length(AN),
+    R #=> sum(Ps) + LenAN - sum(Ns) #>= 1.
+%
+post(bool_ge_imp(A,B,R)) =>
+    R #=> (A #>= B).
+post(bool_gt_imp(A,B,R)) =>
+    R #=> (A #> B).
+post(bool_le_imp(A,B,R)) =>
+    R #=> (A #=< B).
+post(bool_lt_imp(A,B,R)) =>
+    R #=> (A #< B).
+post(bool_ne_imp(A,B,R)) =>
+    R #=> (A #!= B).
+%
+post(bool_and_imp(A,B,R)) =>
+    R #=> (A #/\ B).
+post(bool_or_imp(A,B,R)) =>
+    R #=> (A #\/ B).
+post(bool_xor_imp(A,B,R)) =>
+    R #=> (A #^ B).
+%
+post(bool_lin_eq_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #= Rhs.
+post(bool_lin_ge_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #>= Rhs.
+post(bool_lin_gt_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #> Rhs.
+post(bool_lin_le_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #=< Rhs.
+post(bool_lin_lt_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #< Rhs.
+post(bool_lin_ne_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #!= Rhs.
+%
 post(int_eq_imp(V1,V2,B)) =>
-    B #<=> (V1#=V2).
+    B #=> (V1 #= V2).
+post(int_ge_imp(V1,V2,B)) =>
+    B #=> (V1 #>= V2).
+post(int_gt_imp(V1,V2,B)) =>
+    B #=> (V1 #> V2).
 post(int_le_imp(V1,V2,B)) =>
-    B #<=> (V1#=<V2).
+    B #=> (V1 #=< V2).
+post(int_lt_imp(V1,V2,B)) =>
+    B #=> (V1 #< V2).
+post(int_ne_imp(V1,V2,B)) =>
+    B #=> (V1 #!= V2).
+%
+post(int_lin_eq_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #= Rhs.
+post(int_lin_ge_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #>= Rhs.
+post(int_lin_gt_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #> Rhs.
+post(int_lin_le_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #=< Rhs.
+post(int_lin_lt_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #< Rhs.
+post(int_lin_ne_imp(Cs,Xs,Rhs,R)) =>
+    vector_sum(Cs,Xs,CXs),
+    R #=> CXs #!= Rhs.
 
 % new, June 2020,
 post(picat_bin_packing(C,Bin,W)) =>
