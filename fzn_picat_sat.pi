@@ -430,19 +430,14 @@ post(set_in_reif(X,DomExp,B)) =>
     B #<=> (X :: NDom).
 %
 post(array_bool_and(Array,B)) =>
-    to_list(Array) =L1,
-    (L1==[]->L11=[1];L11=L1),
-    B :: 0..1,
-    B #= min(L11).
+    to_list(Array) = L,
+    bp.ic_bool_and(L,B).
 post(array_bool_or(Array,B)) =>
-    to_list(Array) = L1,
-    (L1==[]->L11=[0];L11=L1),
-    B :: 0..1,
-    B #= max(L11).
+    to_list(Array) = L,
+    bp.ic_bool_or(L,B).
 post(array_bool_xor(Array)) =>
-    to_list(Array) =L1,
-    (L1==[]->L11=[0];L11=L1),
-    sum(L11) mod 2 #= 1.
+    to_list(Array) = L,
+    bp.ic_bool_xor(L,1).
 %
 post(array_bool_element(I,Array,E)) =>
     to_list(Array) = List,
@@ -495,17 +490,11 @@ post(bool2int(X,Y)) =>
     X=Y,
     Y :: 0..1.
 post(bool_and(X,Y,Z)) =>
-    (Z #= (X #/\ Y)).
+    bp.ic_bool_and([X,Y],Z).
 post(bool_clause(Ps,Ns)) =>
     to_list(Ps) = L1, 
     to_list(Ns) = L2, 
-    (L1==[]->L11=[0];L11=L1),
-    (L2==[]->L22=[1];L22=L2),
-    B1 :: 0..1,
-    B2 :: 0..1,
-    B1 #= max(L11),
-    B2 #= min(L22),
-    B1 #>= B2.
+    bp.ic_bool_clause(L1,L2).
 post(bool_eq(X,Y)) =>
     X=Y.
 post(bool_eq_reif(X,Y,B)) =>
@@ -521,9 +510,9 @@ post(bool_lt_reif(X,Y,B)) =>
 post(bool_not(X,Y)) =>
     Y #<=> (#~ X).
 post(bool_or(X,Y,Z)) =>
-    Z #<=> (X #\/ Y).       
+    bp.ic_bool_or([X,Y],Z).
 post(bool_xor(X,Y,Z)) =>
-    Z #<=> (X #^ Y).   
+    bp.ic_bool_xor([X,Y],Z).
 %
 post(int_pow(X,Y,Z)) =>
     Z #= X**Y.
@@ -757,19 +746,17 @@ post(picat_lex_less_bool(Vec1,Vec2)) =>
 %
 post(array_bool_and_imp(A,R)) =>
     L = to_list(A),
-    R #=> min(L) #= 1.        
+    bp.ic_bool_and_imp(L,R).
 post(array_bool_or_imp(A,R)) =>
     L = to_list(A),
-    R #=> max(L) #= 1.
+    bp.ic_bool_or_imp(L,R).    
 post(array_bool_xor_imp(A,R)) =>
     L = to_list(A),
-    (L == []-> L1 = [0]; L1 = L),
-    R #=> sum(L1) mod 2 #= 1.
-post(bool_clause_imp(AP,AN,R)) =>
-    Ps = to_list(AP),
-    Ns = to_list(AN),
-    LenAN = length(AN),
-    R #=> sum(Ps) + LenAN - sum(Ns) #>= 1.
+    bp.ic_bool_xor_imp(L,R).    
+post(bool_clause_imp(Ps,Ns,R)) =>
+    to_list(Ps) = L1, 
+    to_list(Ns) = L2,
+    bp.ic_bool_clause_imp(L1,L2,R).
 %
 post(bool_ge_imp(A,B,R)) =>
     R #=> (A #>= B).
