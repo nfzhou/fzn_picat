@@ -15,7 +15,6 @@
 
        picat fzn_picat_sat zebra
 */
-import fzn_parser.
 import sat.    
 
 main(Args) =>
@@ -264,6 +263,10 @@ proc_solve_annotations(SolveType,_SolveAnns,_SymTable,PVars,SVars,OutAnns) =>
     (HMap.has_key(nthreads) -> NThreads = HMap.get(nthreads),Options = [$threads(NThreads)]; Options = []),
     proc_solve(SolveType,_LabelCalls,PVars,SVars,OutAnns.reverse(),Options).
 
+/*
+proc_solve(_,_LabelCalls,PVars,_SVars,ROutAnns,Options) =>    
+    solve($[dump("__tmp.cnf")],PVars).
+*/    
 proc_solve(all,_LabelCalls,PVars,_SVars,ROutAnns,Options) ?=>
     solve(Options,PVars),
     fzn_output(ROutAnns),
@@ -400,7 +403,7 @@ new_domain_var(X) =>
     X = new_fd_var().
 
 %%%
-% post(Constr) ?=> writeln($posting(Constr)),fail.
+% post(Constr) ?=> println($posting(Constr)),fail.
 
 post(picat_connected(FromArr,ToArr,NsArr,EsArr)) =>
     FromList = to_list(FromArr),
@@ -420,12 +423,12 @@ post(set_in(X,DomExp)) =>
     ),
     X :: NDom.
 post(set_in_reif(X,DomExp,B)) =>
-    (DomExp='{}'(Dom)->
-        NDom=Dom
-    ;DomExp=$range(L,U) -> 
-        NDom=L..U
+    (DomExp = '{}'(Dom) ->
+        NDom = Dom
+    ;DomExp = $range(L,U) -> 
+        NDom = L..U
     ;
-        NDom=DomExp
+        NDom = DomExp
     ),
     B #<=> (X :: NDom).
 %
@@ -438,7 +441,7 @@ post(array_bool_or(Array,B)) =>
 post(array_bool_xor(Array)) =>
     to_list(Array) = L,
     bp.ic_bool_xor(L,1).
-%
+
 post(array_bool_element(I,Array,E)) =>
     to_list(Array) = List,
     LB = fd_min(I),
@@ -469,21 +472,9 @@ post(picat_member_bool(Array,E)) =>
         E #=< Max
     ).
 post(picat_member_int(Array,E)) =>
-    to_list(Array) = List,
-    (ground(Array) ->
-        E :: List
-    ;
-        reified_member(List,E,Bs),
-        max(Bs) #>= 1
-    ).
+    fd_member(E, to_list(Array)).
 post(member(Array,E)) =>
-    to_list(Array) = List,
-    (ground(Array) ->
-        E :: List
-    ;
-        reified_member(List,E,Bs),
-        max(Bs) #>= 1
-    ).
+    fd_member(E, to_list(Array)).
 
 %
 post(bool2int(X,Y)) =>
@@ -629,15 +620,21 @@ post(picat_inverse(Vec1,Vec2)) =>
     assignment(Vec1,Vec2).
 post(picat_global_cardinality(Vec,KeyVec,CardVec)) =>
     List = to_list(Vec),
-    KeyL = to_list(KeyVec),
-    CardL = to_list(CardVec),
-    Pairs = [$(Key-Card) : {Key,Card} in zip(KeyL,CardL)],
-    global_cardinality(List,Pairs).
+    Keys = to_list(KeyVec),
+    Cards = to_list(CardVec),
+    global_cardinality(List,Keys,Cards).
+post(picat_global_cardinality_closed(Vec,KeyVec,CardVec)) =>
+    List = to_list(Vec),
+    Keys = to_list(KeyVec),
+    Cards = to_list(CardVec),
+    global_cardinality_closed(List,Keys,Cards).
+post(picat_global_cardinality_low_up(X,Cover,LBound,UBound)) =>
+    global_cardinality_low_up(X,Cover,LBound,UBound).
+post(picat_global_cardinality_low_up_closed(X,Cover,LBound,UBound)) =>
+    global_cardinality_low_up_closed(X,Cover,LBound,UBound).
 post(picat_count_eq_reif(Vec,V,N,B)) =>
     List = to_list(Vec),
-    Ni :: 0..length(Vec),
-    count(V,List,#=,Ni),
-    B #<=> (N #= Ni).
+	count_eq_reif(List,V,N,B).
 % FIXME: swapped <, =< with >, =< respectively. (Roberto Amadini)
 post(picat_count(Vec,V,N)) =>
     List = to_list(Vec),
@@ -829,75 +826,36 @@ post(int_lin_ne_imp(Cs,Xs,Rhs,R)) =>
 
 % new, June 2020,
 post(picat_bin_packing(C,Bin,W)) =>
-    BinMin = fd_min_array(Bin),
-    BinMax = fd_max_array(Bin),
-    N = Bin.len,
-    foreach(B in BinMin..BinMax) 
-        sum([W[I] * (Bin[I] #= B) : I in 1..N]) #=< C
-    end.
+    bin_packing(C,Bin,W).
 post(picat_bin_packing_load(Load, Bin, W)) =>
-    sum(Load) #= sum(W),
-    LoadLen = Load.len,
-    BinLen = Bin.len,
-    foreach(I in 1..BinLen) 
-        % min(index_set(load)) <= bin[i] /\ bin[i] <= max(index_set(load))
-        1 #=< Bin[I],
-        Bin[I] #<= LoadLen
-    end,
-    foreach(B in 1..LoadLen) 
-        Load[B] #= sum([W[I] * (Bin[I] #= B) : I in 1..BinLen])
-    end.
+    bin_packing_load(Load, Bin, W).
+%    
 post(picat_decreasing_bool(X)) =>
     decreasing(X).
+post(picat_strictly_decreasing_bool(X)) =>
+    decreasing_strict(X).
 post(picat_decreasing_int(X)) =>
     decreasing(X).
+post(picat_strictly_decreasing_int(X)) =>
+    decreasing_strict(X).
+post(picat_increasing_bool(X)) =>
+    increasing(X).
+post(picat_strictly_increasing_bool(X)) =>
+    increasing_strict(X).
+post(picat_increasing_int(X)) =>
+    increasing(X).
+post(picat_strictly_increasing_int(X)) =>
+    increasing_strict(X).
+%
 post(picat_diffn_nonstrict(X,Y,DX,DY)) =>
-    N = X.len,
-    foreach(I in 1..N, J in I+1..N, DX[I] !== 0, DX[J] !== 0, DY[I] !== 0, DY[J] !== 0)
-        X[I] + DX[I] #=< X[J] #\/
-        Y[I] + DY[I] #=< Y[J] #\/
-        X[J] + DX[J] #=< X[I] #\/
-        Y[J] + DY[J] #=< Y[I] #\/
-        DX[I] #= 0 #\/
-        DX[J] #= 0 #\/
-        DY[I] #= 0 #\/
-        DY[J] #= 0
-    end.
-post(picat_global_cardinality_closed(X,Cover,Counts)) =>
-    CoverList = to_list(Cover),
-    foreach(I in 1..X.len)
-        X[I] :: CoverList
-    end,
-    post($picat_global_cardinality(X, Cover, Counts)). 
-post(picat_global_cardinality_low_up(X,Cover,LBound,UBound)) =>
-%    writeln($global_cardinality_low_up(X,Cover,LBound,UBound)),
-    N = len(Cover),
-    T = new_array(N),
-    foreach(I in 1..N)
-        T[I] :: LBound[I]..UBound[I],
-        count(Cover[I], X, #=, T[I])
-    end.
-post(picat_global_cardinality_low_up_closed(X,Cover,LBound,UBound)) =>
-    N = len(X),
-    CoverList = to_list(Cover),
-    X :: CoverList,
-    post($picat_global_cardinality_low_up(X, Cover, LBound, UBound)),
-    % Implied condition
-    N #>= sum(LBound),
-    N #=< sum(UBound).
+    diffn_nonstrict(X,Y,DX,DY).
 post(picat_increasing_bool(X)) =>
     increasing(X).
 post(picat_increasing_int(X)) =>
     increasing(X).
 post(picat_knapsack(WVec, PVec, XVec, W, P)) =>
-    N = XVec.len,
-    foreach(I in 1..N)
-      XVec[I] #>= 0
-    end,
-    W #>= 0,
-    P #>= 0,
-    P #= sum([XVec[I]*PVec[I] : I in 1..N]),
-    W #= sum([XVec[I]*WVec[I] : I in 1..N]).
+	knapsack(WVec, PVec, XVec, W, P).
+
 post(picat_network_flow_cost(Arc1D, Balance,Weight,Flow, Cost)) =>
     ArcLen = len(Arc1D) div 2,
     SourceNode = 1,
@@ -911,39 +869,42 @@ post(picat_network_flow_cost(Arc1D, Balance,Weight,Flow, Cost)) =>
         sum ([Flow[J] : J in 1..ArcLen, I == Arc1D[(J-1)*2+SinkNode]]) #= Balance[I] 
     end.
 post(picat_seq_precede_chain_int(X)) =>
-    N = len(X),
-    Low = fd_min_array(X), % least possible value
-    Up = fd_max_array(X),  % greatest possible value
-    F = 1, % min ( index_set (X ))
-    H = new_array(N),
-    H :: Low..Up,    
-    H[F] #<= 1,
-    H[F] #= max(X[F], 0),
-    foreach(I in 1..N, I !== F) 
-       H[I] #<= H[I-1] + 1,
-       H[I] #= max(X[I], H[I-1])
-    end.
+    seq_precede_chain(X).
 post(picat_value_precede_chain_int(C, X)) =>
-    foreach(I in 2..C.length)
-        post($picat_value_precede_int(C[I-1], C[I], X))
-    end.
+    value_precede_chain(C, X).
 post(picat_value_precede_int(S,T,X)) =>
-   XLen = X.length,
-   B = new_array(XLen+1),
-   B :: 0..1,
-   foreach(I in 1..XLen)
-       Xis #= (X[I] #= S),
-       Xis #=> (B[I+1] #= 1),
-       #~ Xis #=> (B[I] #= B[I+1]),
-       #~ B[I] #=> (X[I] #!= T)
-   end,
-   B[1] #= 0.
+    value_precede(S,T,X).
+    
+% new, in 2023
+post(picat_at_most(N,X,V)) =>
+    List = to_list(X),
+    count(V,List,#=<,N).
+post(picat_argmax(Array,Z)) =>
+    argmax(Array,Z).
+post(picat_nvalue(N,Array)) =>
+    nvalue(N, to_list(Array)).
+post(picat_sliding_sum(Low,Up,Seq,Vs)) =>
+    N = len(Vs),
+    S = new_array(N),
+    S[1] = Vs[1],
+    foreach (I in 2..N)
+        S[I-1] + Vs[I] #= S[I]
+    end,
+    Low #=< S[Seq],
+    S[Seq] #=< Up,
+    foreach (I in (Seq+1)..(N-Seq+1))
+        S[I] - S[I-Seq] #= T,
+        Low #=< T,
+        T #=< Up
+    end.
+post(picat_all_equal(Array)) =>
+    all_equal(Array).
 %
 post(Constr) =>
     throw $unsupported_constraint(Constr).
 
-fd_min_array(X) = min([fd_min(V) : V in X]).
-fd_max_array(X) = max([fd_max(V) : V in X]).
+%fd_min_array(X) = min([fd_min(V) : V in X]).
+%fd_max_array(X) = max([fd_max(V) : V in X]).
 
 %%
 reified_member([],_E,Bs) => Bs = [].
@@ -1002,3 +963,5 @@ transform_circuit_aux([V|Vs],NVs,LB) =>
     NVs = [NV|NVsR],
     transform_circuit_aux(Vs,NVsR,LB).
 
+include "fzn_parser.pi".
+include "fzn_tokenizer.pi".

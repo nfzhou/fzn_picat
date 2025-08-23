@@ -1,6 +1,3 @@
-module fzn_parser.
-import fzn_tokenizer.
-
 /*
 %----------------------------------------------------------------------
 % BEGIN LICENSE BLOCK
