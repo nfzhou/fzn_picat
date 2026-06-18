@@ -1,0 +1,75 @@
+name: Build MiniZinc Challenge image
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: MiniZinc Challenge year to build (e.g. 2026)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-publish:
+    name: Build and publish Challenge image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Print fzn_picat_sat version
+        run: |
+          version="$(./fzn_picat_sat --version)"
+          printf '%s\n' "$version"
+          {
+            echo "FZN_PICAT_SAT_VERSION<<EOF"
+            printf '%s\n' "$version"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+      - name: Set image name
+        run: |
+          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: .
+          push: true
+          build-args: |
+            year=${{ inputs.year }}
+          tags: ${{ env.IMAGE_NAME }}:mznc${{ inputs.year }}
+
+      - name: Print image summary
+        run: |
+          {
+            echo "# Built image for MiniZinc Challenge ${{ inputs.year }}"
+            echo
+            echo '`fzn_picat_sat` version:'
+            echo
+            echo '```'
+            printf '%s\n' "$FZN_PICAT_SAT_VERSION"
+            echo '```'
+            echo
+            echo "The image has been pushed to"
+            echo
+            echo '```'
+            echo "${IMAGE_NAME}:mznc${{ inputs.year }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

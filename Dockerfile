@@ -1,4 +1,6 @@
-FROM minizinc/mznc2026:latest
+ARG year
+
+FROM minizinc/mznc${year}:latest
 
 # Install fzn_picat_sat binary
 COPY --chmod=0755 ./fzn_picat_sat /picat_sat/bin/fzn_picat_sat
